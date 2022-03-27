@@ -37,73 +37,73 @@ float randNumGen(){
 /**
 The task allocated to a thread
 **/
-void *doCalcs(void *threadid)
+void *doThreadWork(void *iteration)
 {
-   long longTid;
-   longTid = (long)threadid;
+   double iterations;
+   iterations = (double)iteration;
    
-   int tid = (int)longTid;       //obtain the integer value of thread id
-
-   //using malloc for the return variable in order make
+    //using malloc for the return variable in order make
    //sure that it is not destroyed once the thread call is finished
-   float *in_count = (float *)malloc(sizeof(float));
-   *in_count=0;
+   float *in_subcount = (float *)malloc(sizeof(float));
+   *in_subcount=0;
    
-   //get the total number of iterations for a thread
-   float tot_iterations= TOT_COUNT/NUM_THREADS;
+   
    
    int counter=0;
    
    //calculation
-   for(counter=0;counter<tot_iterations;counter++){
+   for(counter=0;counter<iterations;counter++){
       float x = randNumGen();
       float y = randNumGen();
       
       float result = sqrt((x*x) + (y*y));
       
       if(result<1){
-         *in_count+=1;         //check if the generated value is inside a unit circle
+         *in_subcount+=1;         //check if the generated value is inside a unit circle
       }
       
    }
    
-   //get the remaining iterations calculated by thread 0
-   if(tid==0){
-      float remainder = TOT_COUNT%NUM_THREADS;
-      
-      for(counter=0;counter<remainder;counter++){
-      float x = randNumGen();
-      float y = randNumGen();
-      
-      float result = sqrt((x*x) + (y*y));
-      
-      if(result<1){
-         *in_count+=1;         //check if the generated value is inside a unit circle
-      }
-      
-   }
+   
    }
 
 
    //printf("In count from #%d : %f\n",tid,*in_count);
    
-   pthread_exit((void *)in_count);     //return the in count
+   pthread_exit((void *)in_subcount);     //return the in count
 }
 
 int main(int argc, char *argv[])
 {
-   pthread_t threads[NUM_THREADS];
    int rc;
    long t;
    void *status;
    float tot_in=0;
-
+   
+   
+   char *a =  argc[1];
+   int numThreads = atoi(a);
+   
+   *a =  argc[2];
+   int iterations = atoi(a);
+   
+  pthread_t threads[numThreads];
+  double threadIteration = iterations/numThreads;
+   
+  int remainder = iterations%numThreads;
+   
+  double threadIterationOne = threadIteration +remainder;
+   
    // Calculate time taken by a request
   struct timespec requestStart, requestEnd;
   clock_gettime(CLOCK_REALTIME, &requestStart);
    
-   for(t=0;t<NUM_THREADS;t++){
-     rc = pthread_create(&threads[t], NULL, doCalcs, (void *)t);
+   for(t=0;t<numThreads;t++){
+
+      if (t == 0)
+           rc = pthread_create(&threads[t], NULL, doThreadWork, (void *)threadIterationOne);     
+         else
+      rc = pthread_create(&threads[t], NULL, doThreadWork, (void *)threadIteration);
      if (rc){
        printf("ERROR; return code from pthread_create() is %d\n", rc);
        exit(-1);
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
      }
 
    //join the threads
-   for(t=0;t<NUM_THREADS;t++){
+   for(t=0;t<numThreads;t++){
            
       pthread_join(threads[t], &status);
       //printf("Return from thread %ld is : %f\n",t, *(float*)status);
